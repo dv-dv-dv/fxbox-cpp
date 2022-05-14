@@ -5,10 +5,10 @@ namespace a2d {
 	template <typename T>
 	class Array2D {
 	protected:
-		T* ptr = NULL;
 		bool dynamic = true;
 		int length, cols, rows, vrows, vrows1, vrows2, vcols, vcols1, vcols2;
 	public:
+		T* ptr = NULL;
 		const int& l = length;
 		const int& c = cols;
 		const int& r = rows;
@@ -43,14 +43,14 @@ namespace a2d {
 			if (avcols2 == -1) avcols2 = cols;
 
 			#if defined(SAFE)
-			if (avrows1 < 0) { std::cout << "\nerror in a2d vpart\n"; throw std::runtime_error(""); }
-			else if (avrows1 > rows) { std::cout << "\nerror in a2d vpart\n"; throw std::runtime_error(""); }
-			else if (avrows2 < 0) { std::cout << "\nerror in a2d vpart\n"; throw std::runtime_error(""); }
-			else if (avrows2 > rows) { std::cout << "\nerror in a2d vpart\n"; throw std::runtime_error(""); }
-			else if (avcols1 < 0) { std::cout << "\nerror in a2d vpart\n"; throw std::runtime_error(""); }
-			else if (avcols1 > cols) { std::cout << "\nerror in a2d vpart\n"; throw std::runtime_error(""); }
-			else if (avcols2 < 0) { std::cout << "\nerror in a2d vpart\n"; throw std::runtime_error(""); }
-			else if (avcols1 > cols) { std::cout << "\nerror in a2d vpart\n"; throw std::runtime_error(""); }
+			if (avrows1 < 0) { std::cout << "\nerror in a2d vpart, vrows1 is less than 0\n"; throw std::runtime_error(""); }
+			else if (avrows1 > rows) { std::cout << "\nerror in a2d vpart, vrows1 is greater than rows\n"; throw std::runtime_error(""); }
+			else if (avrows2 < 0) { std::cout << "\nerror in a2d vpart, vrows2 is less than 0\n"; throw std::runtime_error(""); }
+			else if (avrows2 > rows) { std::cout << "\nerror in a2d vpart, vrows2 is greater than rows\n"; throw std::runtime_error(""); }
+			else if (avcols1 < 0) { std::cout << "\nerror in a2d vpart, vcols1 is less than 0\n"; throw std::runtime_error(""); }
+			else if (avcols1 > cols) { std::cout << "\nerror in a2d vpart, vcols1 is greater than cols\n"; throw std::runtime_error(""); }
+			else if (avcols2 < 0) { std::cout << "\nerror in a2d vpart, vcols2 is less than zero\n"; throw std::runtime_error(""); }
+			else if (avcols2 > cols) { std::cout << "\nerror in a2d vpart, vcols 2 is greater than cols\n"; throw std::runtime_error(""); }
 			#endif
 
 			vrows1 = avrows1;
@@ -69,15 +69,53 @@ namespace a2d {
 			return *this;
 		}
 		T& operator()(int index1, int index2) {
+			if (index1 == -1) { index1 = rows - 1; }
+			if (index2 == -1) { index2 = cols - 1; }
+#if defined(SAFE)
+			if (index1 >= this->rows) { std::cout << "\na2d indexing error: out of bounds\n"; throw std::runtime_error("");
+			}
+			else if (index2 >= this->cols) { std::cout << "\na2d indexing error: out of bounds\n"; throw std::runtime_error("");
+			}
+			else if (index1 < 0) { std::cout << "\na2d indexing error: out of bounds\n"; throw std::runtime_error("");
+			}
+			else if (index2 < 0) { std::cout << "\na2d indexing error: out of bounds\n"; throw std::runtime_error("");
+			}
+#endif
 			return ptr[index1 * cols + index2];
 		}
 		T& operator()(int index) {
+			if (index == -1) { index = length - 1; }
+#if defined(SAFE)
+			if (index >= this->length) { std::cout << "\na2d indexing error: out of bounds\n"; throw std::runtime_error("");
+			}
+			else if (index < 0) { std::cout << "\na2d indexing error: out of bounds\n"; throw std::runtime_error("");
+			}
+#endif
 			return ptr[index];
 		}
 		const T& operator()(int index1, int index2) const {
+			if (index1 == -1) { index1 = rows - 1; }
+			if (index2 == -1) { index2 = cols - 1; }
+#if defined(SAFE)
+			if (index1 >= this->rows) { std::cout << "\na2d indexing error: out of bounds\n"; throw std::runtime_error("");
+			}
+			else if (index2 >= this->cols) { std::cout << "\na2d indexing error: out of bounds\n"; throw std::runtime_error("");
+			}
+			else if (index1 < 0) { std::cout << "\na2d indexing error: out of bounds\n"; throw std::runtime_error("");
+			}
+			else if (index2 < 0) { std::cout << "\na2d indexing error: out of bounds\n"; throw std::runtime_error("");
+			}
+#endif
 			return ptr[index1 * cols + index2];
 		}
 		const T& operator()(int index) const {
+			if (index == -1) { index = length - 1; }
+#if defined(SAFE)
+			if (index >= this->length) { std::cout << "\na2d indexing error: out of bounds\n"; throw std::runtime_error("");
+			}
+			else if (index < 0) { std::cout << "\na2d indexing error: out of bounds\n"; throw std::runtime_error("");
+			}
+#endif
 			return ptr[index];
 		}
 	};
@@ -124,6 +162,8 @@ namespace a2d {
 		Array2D<T>& resize(int R, int C = 1) {
 			delete[] this->ptr;
 			this->ptr = new T[R * C]();
+			this->rows = R;
+			this->cols = C;
 			this->vreset();
 			return *this;
 		}
@@ -154,13 +194,17 @@ namespace a2d {
 		return 0;
 	}
 	template <typename T>
-	int atest(const Array2D<T>& test) {
-		for (auto i = 0; i < test.r; i++) {
-			for (auto j = 0; j < 10; j++) {
+	int atest(const Array2D<T>& test, int t) {
+		int testr = t, testc = t;
+		if (t > test.r) { testr = test.r; }
+		if (t > test.c) { testc = test.c; }
+		for (auto i = 0; i < testr; i++) {
+			for (auto j = 0; j < testc; j++) {
 				std::cout << test(i, j) << " ";
 			}
 			std::cout << "\n";
 		}
+		std::cout << "\n";
 		std::cout << "\n";
 		return 0;
 	}
