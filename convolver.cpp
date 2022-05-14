@@ -24,7 +24,7 @@ void Convolver::Filter::create(int abuffers_needed, int aoffset, a2d::Array2D<pf
 	aset(filter.vpart(0, afilter.r), afilter).vreset();
 	rfft(rfft1);
 
-	rfft1.plan(real, complex); 
+	rfft1.plan(real, complex);
 }
 int Convolver::Filter::convolve() {
 	using namespace a2d_fft_f;
@@ -38,8 +38,8 @@ int Convolver::Filter::convolve_rfft() {
 	return 0;
 }
 
-int Convolver::add_to_convolution_buffer(a2d::Array2D<pflt>& audio_in, long count, long offset) {
-	long index1 = ((count + offset) % convolution_buffer_blength) * buffer_size;
+int Convolver::add_to_convolution_buffer(a2d::Array2D<pflt>& audio_in, long acount, long aoffset) {
+	long index1 = ((acount + aoffset) % convolution_buffer_blength) * buffer_size;
 	long index2 = index1 + audio_in.r;
 	audio_in.vreset(); convolution_buffer.vreset();
 	if (index2 > convolution_buffer.r) {
@@ -54,9 +54,9 @@ int Convolver::add_to_convolution_buffer(a2d::Array2D<pflt>& audio_in, long coun
 	audio_in.vreset(); convolution_buffer.vreset();
 	return 0;
 } 
-a2d::Array2D<pflt>& Convolver::get_previous_buffers(a2d::Array2D<pflt>& real, int no_previous_buffers, long count) {
+a2d::Array2D<pflt>& Convolver::get_previous_buffers(a2d::Array2D<pflt>& real, int no_previous_buffers, long acount) {
 	using namespace a2d;
-	long count_pb = count % longest_filter;
+	long count_pb = acount % longest_filter;
 	long index1 = (count_pb + 1 - no_previous_buffers) * buffer_size;
 	real.vreset(); previous_buffers.vreset();
 	if (index1 < 0) {
@@ -79,8 +79,8 @@ a2d::Array2D<pflt>& Convolver::get_previous_buffers(a2d::Array2D<pflt>& real, in
 }
 a2d::Array2D<pflt>& Convolver::get_from_convolution_buffer(a2d::Array2D<pflt>& getter) {
 	using namespace a2d;
-	long index1 = (count % convolution_buffer_blength) * buffer_size;
-	long index2 = index1 + buffer_size;
+	long index1 = count * buffer_size;
+	long index2 = (count + 1) * buffer_size;
 	convolution_buffer.vpart(index1, index2);
 	aset(getter, convolution_buffer);
 	kset(convolution_buffer, 0);
@@ -94,7 +94,6 @@ int Convolver::partition_impulse(int ff_blength, int height, int n_cap, int n_st
 	infile.load("longverb.wav");
 	int num_samples = infile.getNumSamplesPerChannel();
 	int f_blength = num_samples / buffer_size;
-
 	Array2Dy<int> buffers_needed(f_blength);
 	Array2Dy<int> filter_indices(f_blength);
 	Array2Dy<int> unique_spectras(n_cap - n_start);
@@ -112,7 +111,7 @@ int Convolver::partition_impulse(int ff_blength, int height, int n_cap, int n_st
 	while (space_left > 0) {
 		buffers_needed(num_filters) = pow(2, n);
 		space_left -= buffers_needed(num_filters);
-		sum_of_previous_filters += buffers_needed(num_filters);
+		sum_of_previous_filters += previous_buffers_needed;
 		filter_indices(num_filters + 1) = buffer_size*buffers_needed(num_filters) + filter_indices(num_filters);
 		if (buffers_needed(num_filters) != previous_buffers_needed) {
 			sum_of_previous_buffers += buffers_needed(num_filters) - previous_buffers_needed;
@@ -120,12 +119,14 @@ int Convolver::partition_impulse(int ff_blength, int height, int n_cap, int n_st
 		}
 		offsets(num_filters) += sum_of_previous_filters - sum_of_previous_buffers + 1;
 		previous_buffers_needed = buffers_needed(num_filters);
-		n += n_step * floor((num_filters % height + 1) / (pflt)height);
+		n += n_step * floor((num_filters % height + 1) / (pflt)height); 
 		if (n > n_cap) { n = n_cap; }
 		num_filters++;
 	}
 
 	convolution_buffer_blength =  ceil(asum(buffers_needed) / (float)buffers_needed(num_filters - 1)) * buffers_needed(num_filters - 1);
+	std::cout << "convolution_buffer_blength: " << convolution_buffer_blength << "\n";
+	std::cout << "asum(buffers_needed): " << asum(buffers_needed) << "\n";
 	convolution_buffer.resize(convolution_buffer_blength * buffer_size, 2);
 	previous_buffers.resize(buffers_needed(num_filters - 1) * buffer_size, 2);
 	filters.resize(num_filters);
@@ -133,20 +134,19 @@ int Convolver::partition_impulse(int ff_blength, int height, int n_cap, int n_st
 	Array2Dy<pflt> filter_partition;
 	for (auto i = 0; i < num_filters; i++) {
 		filter_partition.resize(buffers_needed(i) * buffer_size, 2);
-		if (i > num_filters) { std::cout << "aasdasd"; }
 		for (auto j = 0; j < filter_partition.r; j++) {
-			if (j + filter_indices(i) == num_samples) { break; }
+			if (j + filter_indices(i) >= num_samples) { break; }
 			filter_partition(j, 0) = infile.samples[0][j + filter_indices(i)];
 			filter_partition(j, 1) = infile.samples[1][j + filter_indices(i)];
 		}
 		filters(i).create(buffers_needed(i), offsets(i), filter_partition);
 	}
 	longest_filter = filters(-1).buffers_needed;
-
 	bool test = true;
 	if (test) {
+		std::cout << "filter number // buffers needed // offsets // filter indices\n";
 		for (auto i = 0; i < num_filters; i++) {
-			std::cout << i << " " << buffers_needed(i) << " " << offsets(i) << " " << filter_indices(i) << "\n";
+			std::cout << i << " " << buffers_needed(i) << " " << offsets(i) << " " << filter_indices(i) << "\n"; 
 		}
 		std::cout << "\nlongest_filter: " << longest_filter;
 		std::cout << "\nunique_spectras: " << num_spectras << "\n";
@@ -170,7 +170,8 @@ a2d::Array2D<pflt>& Convolver::convolve(a2d::Array2D<pflt>& audio_in) {
 		add_to_convolution_buffer(filters(i).real, count, filters(i).offset);
 	}
 	get_from_convolution_buffer(audio_in);
-	count++;
+	abs_count++;
+	count = abs_count % convolution_buffer_blength;
 	return audio_in;
 }
 

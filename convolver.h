@@ -21,7 +21,7 @@ private:
 		int convolve_rfft();
 	};
 
-	long count = 0, longest_filter, convolution_buffer_blength;
+	long count = 0, abs_count = 0, longest_filter, convolution_buffer_blength;
 	a2d::Array2Dy<Filter> filters;
 	a2d::Array2Dy<pflt> convolution_buffer;
 	a2d::Array2Dy<pflt> previous_buffers;
