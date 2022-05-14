@@ -36,6 +36,7 @@ namespace a2d_fft_f {
 			this->plan(areal, acomplex, axis);
 		}
 		void plan(a2d::Array2D<float>& areal, a2d::Array2D<float>& acomplex, int aaxis = 0) {
+			const unsigned int fftw_flag = FFTW_MEASURE;
 			if (aaxis == 0) {
 				if (acomplex.r != (areal.r / 2 + 1)) { std::cout << "\na2d_rfft: rows do not match for given axis of " << aaxis << ", real.r: " << areal.r << ", complex.r: " << acomplex.r << "\n"; throw std::runtime_error(""); }
 				else if (acomplex.c != 2 * areal.c) { std::cout << "\na2d_rfft: cols do not match for given axis of " << aaxis << "\n"; throw std::runtime_error(""); }
@@ -49,8 +50,8 @@ namespace a2d_fft_f {
 				int idist = 1, odist = 1; // ???
 				int istride = areal.c, ostride = areal.c; // cols
 				int* inembed = nn, * onembed = nn;
-				fwd = fftwf_plan_many_dft_r2c(rank, nn, howmany, areal.ptr, inembed, istride, idist, (fftwf_complex*)acomplex.ptr, onembed, ostride, odist, FFTW_ESTIMATE);
-				bck = fftwf_plan_many_dft_c2r(rank, nn, howmany, (fftwf_complex*)acomplex.ptr, onembed, ostride, odist, areal.ptr, inembed, istride, idist, FFTW_ESTIMATE);
+				fwd = fftwf_plan_many_dft_r2c(rank, nn, howmany, areal.ptr, inembed, istride, idist, (fftwf_complex*)acomplex.ptr, onembed, ostride, odist, fftw_flag);
+				bck = fftwf_plan_many_dft_c2r(rank, nn, howmany, (fftwf_complex*)acomplex.ptr, onembed, ostride, odist, areal.ptr, inembed, istride, idist, fftw_flag);
 			}
 			else if (aaxis == 1) {
 				if (acomplex.c != 2 * (areal.c / 2 + 1)) { std::cout << "\na2d_rfft: rows do not match for given axis of " << aaxis << "\n"; throw std::runtime_error(""); }
@@ -64,8 +65,8 @@ namespace a2d_fft_f {
 				int idist = 20, odist = 11; // ???
 				int istride = 1, ostride = 1; // cols
 				int* inembed = nn, * onembed = nn;
-				fwd = fftwf_plan_many_dft_r2c(rank, nn, howmany, areal.ptr, inembed, istride, idist, (fftwf_complex*)acomplex.ptr, onembed, ostride, odist, FFTW_ESTIMATE);
-				bck = fftwf_plan_many_dft_c2r(rank, nn, howmany, (fftwf_complex*)acomplex.ptr, onembed, ostride, odist, areal.ptr, inembed, istride, idist, FFTW_ESTIMATE);
+				fwd = fftwf_plan_many_dft_r2c(rank, nn, howmany, areal.ptr, inembed, istride, idist, (fftwf_complex*)acomplex.ptr, onembed, ostride, odist, fftw_flag);
+				bck = fftwf_plan_many_dft_c2r(rank, nn, howmany, (fftwf_complex*)acomplex.ptr, onembed, ostride, odist, areal.ptr, inembed, istride, idist, fftw_flag);
 			}
 			else { std::cout << "\na2d_rfft: invalid axis\n"; throw std::runtime_error(""); }
 			real_r = real->r;

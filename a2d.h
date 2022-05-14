@@ -5,8 +5,8 @@ namespace a2d {
 	template <typename T>
 	class Array2D {
 	protected:
-		bool dynamic = true;
 		int length, cols, rows, vrows, vrows1, vrows2, vcols, vcols1, vcols2;
+		bool dynamic = true;
 	public:
 		T* ptr = NULL;
 		const int& l = length;
