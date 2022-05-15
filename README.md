@@ -3,7 +3,7 @@ remaking the fxbox in C++
 
 The compressor is functional and 90% complete.
 
-The convolver is about half-way done.
+The convolver is functional and 70% complete.
 
 The equalizer has not been started yet.
 
