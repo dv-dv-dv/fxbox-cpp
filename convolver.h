@@ -8,7 +8,7 @@
 class Convolver {
 private:
 	class Spectra {
-	public:
+	public: 
 		long count;
 		long buffers_needed;
 		a2d::Array2Dy<pflt> real;

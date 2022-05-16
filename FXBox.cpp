@@ -18,9 +18,9 @@ int main(){
 
 	infile.load("guitar_sample16.wav");
 	int numSamples = infile.getNumSamplesPerChannel();
-	int numChannels = infile.getNumChannels();
+	int numChannels = infile.getNumChannels(); 
 	int numBuffers = numSamples / buffer_size;
-
+	 
 	AudioFile<pflt>::AudioBuffer buffer;
 
 	Array2Ds<pflt, buffer_size, 2> adata;

@@ -6,7 +6,7 @@
 #ifndef COMPRESS_HPP
 class Compressor {
 private:
-	pflt gcp1, gcp2, gcp3, gcp4, atk, rel, ldpo;
+	pflt gcp1, gcp2, gcp3, gcp4, atk, rel, ldpo; 
 	a2d::Array2Ds<pflt, buffer_size> audio_level1;
 	a2d::Array2Ds<pflt, buffer_size> audio_level2;
 	int compute_params();

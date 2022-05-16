@@ -11,10 +11,10 @@ int Compressor::compute_params() {
 }
 a2d::Array2D<pflt>& Compressor::gain_computer(a2d::Array2D<pflt>& audio_level) {
 	pflt test;
-	for (auto i = 0; i < audio_level.l; i++) {
+	for (auto i = 0; i < audio_level.length; i++) {
 		test = 2 * (audio_level(i) - thresh);
 		if (test < -knee) { break; }
-		else if (abs(test) <= knee) {
+		else if (abs(test) <= knee) { 
 			audio_level(i) += gcp1 * pow(audio_level(i) + gcp2, 2);
 		}
 		else if (test > knee) {
@@ -24,7 +24,7 @@ a2d::Array2D<pflt>& Compressor::gain_computer(a2d::Array2D<pflt>& audio_level) {
 	return audio_level;
 }
 a2d::Array2D<pflt>& Compressor::level_detector(a2d::Array2D<pflt>& audio_level) {
-	for (auto i = 0; i < audio_level.l; i++) {
+	for (auto i = 0; i < audio_level.length; i++) {
 		if (audio_level(i) > ldpo) {
 			audio_level(i) = atk * ldpo + (1 - atk) * audio_level(i);
 		}
@@ -36,7 +36,7 @@ a2d::Array2D<pflt>& Compressor::level_detector(a2d::Array2D<pflt>& audio_level) 
 	return audio_level;
 }
 a2d::Array2D<pflt>& Compressor::linear_to_log(a2d::Array2D<pflt>& audio_level) {
-	for (auto i = 0; i < audio_level.l; i++) {
+	for (auto i = 0; i < audio_level.length; i++) {
 		if (audio_level(i) == 0) {
 			audio_level(i) = -999.9;
 		}
@@ -47,7 +47,7 @@ a2d::Array2D<pflt>& Compressor::linear_to_log(a2d::Array2D<pflt>& audio_level) {
 	return audio_level;
 }
 a2d::Array2D<pflt>& Compressor::log_to_linear(a2d::Array2D<pflt>& audio_level) {
-	for (auto i = 0; i < audio_level.l; i++) {
+	for (auto i = 0; i < audio_level.length; i++) {
 		audio_level(i) = pow(10, audio_level(i) / 20);
 	}
 	return audio_level;
