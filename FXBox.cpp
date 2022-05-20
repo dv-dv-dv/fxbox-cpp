@@ -24,8 +24,8 @@ int main(){
 	AudioFile<pflt>::AudioBuffer buffer;
 
 	Array2Ds<pflt, buffer_size, 2> adata;
-	Compressor comp = Compressor(-60, 7, 10, 0, 15, 0.001, 0.5);
-	Convolver conv = Convolver();
+	Compressor comp(-60, 7, 10, 0, 15, 0.001, 0.5);
+	Convolver conv(0); 
 	std::cout << "buffer size: " << buffer_size << "\n";
 	std::cout << "number of buffers: " << numBuffers << "\n";
 	buffer.resize(2);
