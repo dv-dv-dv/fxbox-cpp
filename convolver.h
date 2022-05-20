@@ -1,6 +1,6 @@
 #pragma once
 #include <iostream>
-#include <tgmath.h>
+#include <cmath>
 #include <thread>
 #include <atomic>
 #include "rqueue.h"

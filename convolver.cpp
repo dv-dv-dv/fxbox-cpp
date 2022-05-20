@@ -235,7 +235,13 @@ void Convolver::convolution_worker() {
 }
 Convolver::Convolver(int test) {
 	std::cout << "initializing convolver...\n";
-	partition_impulse(3, 4, 5, 2, 0);
+	const int ff_power = 3;
+	const int n_step = 2;
+	const int ff_blength = pow(2, ff_power) - 1;
+	const int n_cap = log2(16384/buffer_size);
+	const int height = pow(2, n_step);
+	const int n_start = ff_power - 1;
+	partition_impulse(ff_blength, height, n_cap, n_step, n_start);
 	count = 0;
 	allow_convolution_worker_thread = true;
 	convolution_buffer_lock = false;
