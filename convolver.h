@@ -2,7 +2,8 @@
 #include <iostream>
 #include <tgmath.h>
 #include <thread>
-#include <queue>
+#include <atomic>
+#include "rqueue.h"
 #include <AudioFile.h>
 #include "a2d.h"
 #include "a2d_fftw3.h"
@@ -28,26 +29,34 @@ private:
 		FilterPartition();
 		FilterPartition(a2d::Array2D<pflt>& filter, Spectra& spec, int offset, int buffers_needed, int filter_blength);
 		void create(a2d::Array2D<pflt>& filter, Spectra& spec, int offset, int buffers_needed, int filter_blength);
-		bool spectra_needed(long count);
+		bool spectra_needed();
 		void schedule(long count);
 		a2d::Array2D<pflt>& convolve_no_rfft();
 		a2d::Array2D<pflt>& convolve_rfft();
 	};
-	long count = 0, longest_filter, convolution_buffer_blength;
+	long longest_filter, convolution_buffer_blength;
 	a2d::Array2Dy<FilterPartition> filters;
 	a2d::Array2Dy<Spectra> spectras;
 	a2d::Array2Dy<pflt> convolution_buffer;
 	a2d::Array2Dy<pflt> previous_buffers;
 	FilterPartition first_filter;
 	Spectra first_spectra;
-	std::queue<FilterPartition*> dog;
+	q::d_rqueue<FilterPartition*> convolution_queue;
+	q::d_rqueue<FilterPartition*> convolution_queue2;
+	std::thread convolution_worker_thread;
+	std::thread convolution_worker_thread2;
+	std::atomic<bool> allow_convolution_worker_thread;
+	std::atomic<bool> convolution_buffer_lock;
+	std::atomic<long> count;
 	int add_to_convolution_buffer(a2d::Array2D<pflt>& audio_in, long count, long offset);
 	a2d::Array2D<pflt>& get_previous_buffers(a2d::Array2D<pflt>& real, int no_previous_buffers, long count);
 	a2d::Array2D<pflt>& get_from_convolution_buffer(a2d::Array2D<pflt>& current_buffer);
 	int partition_impulse(int ff_blength, int height, int n_cap, int n_step, int n_start);
-	int convolution_worker();
-public:
-	Convolver();
+	void convolution_worker();
+public: 
+	Convolver(int test);
+	~Convolver();
+	int close();
 	a2d::Array2D<pflt>& convolve(a2d::Array2D<pflt>& audio_in);
 };
 
