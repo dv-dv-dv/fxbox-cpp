@@ -2,52 +2,69 @@
 #include <iostream>
 #include "convolver.h"
 Convolver::FilterPartition::FilterPartition() {
-	buffers_needed = offset = -1;
+	buffers_needed = offset = filter_blength = -1;
 	spec = NULL;
+	real = NULL;
 }
-void Convolver::FilterPartition::create(int abuffers_needed, int aoffset, a2d::Array2D<pflt>& afilter, Spectra& aspec) {
+Convolver::FilterPartition::FilterPartition(a2d::Array2D<pflt>& filter, Spectra& spec, int offset, int buffers_needed, int filter_blength = -1) {
+	this->create(filter, spec, offset, buffers_needed, filter_blength);
+}
+void Convolver::FilterPartition::create(a2d::Array2D<pflt>& filter, Spectra& spec, int offset, int buffers_needed, int filter_blength = -1) {
 	using namespace a2d_fft_f; using namespace a2d;
-	Array2Dy<pflt> filter;
-	buffers_needed = abuffers_needed;
-	spec = &aspec;
-	offset = aoffset;
-	int real_size = 2 * buffer_size * buffers_needed;
-	int complex_size = real_size / 2 + 1; 
+	Array2Dy<pflt> filter_temp;
+	this->filter_blength = filter_blength;
+	if (filter_blength == -1) { 
+		this->filter_blength = buffers_needed;
+	}
+	this->buffers_needed = buffers_needed;
+	this->spec = &spec;
+	this->real = &this->spec->real;
+	this->offset = offset;
+	int real_size = buffer_size * (this->buffers_needed + this->filter_blength);
+	int complex_size = real_size / 2 + 1;
 
-	filter.resize(real_size, 2);
+	filter_temp.resize(real_size, 2);
 	filter_rfft.resize(complex_size, 4);
 
-	rfft1.plan(filter, filter_rfft, 0);
-	aset(filter.vpart(0, afilter.rows), afilter).vreset();
+	rfft1.plan(filter_temp, filter_rfft, 0);
+	aset(filter_temp.vpart(0, filter.rows), filter).vreset();
 	rfft(rfft1);
-	rfft1.plan(spec->real, spec->complex1);
-	irfft1.plan(spec->real, spec->complex2);
+	rfft1.plan(this->spec->real, this->spec->complex1);
+	irfft1.plan(this->spec->real, this->spec->complex2);
 }
-bool Convolver::FilterPartition::spectra_needed(long acount) {
-	if (spec->count == acount) {
+bool Convolver::FilterPartition::spectra_needed(long count) {
+	if (spec->count == count) {
 		return false;
 	}
 	else {
-		spec->count = acount;
+		spec->count = count;
 		return true;
 	}
 }
-int Convolver::FilterPartition::convolve_rfft() {
+void Convolver::FilterPartition::schedule(long count) {
+	this->count = count;
+	this->deadline = count + this->offset;
+}
+a2d::Array2D<pflt>& Convolver::FilterPartition::convolve_rfft() {
 	using namespace a2d_fft_f; using namespace a2d;
 	rfft(rfft1);
 	c_amult(spec->complex2, spec->complex1, filter_rfft);
 	irfft(irfft1);
-	return 0;
+	return spec->real;
 }
-int Convolver::FilterPartition::convolve_no_rfft() {
+a2d::Array2D<pflt>& Convolver::FilterPartition::convolve_no_rfft() {
 	using namespace a2d_fft_f; using namespace a2d;
 	c_amult(spec->complex2, spec->complex1, filter_rfft);
 	irfft(irfft1);
-	return 0;
+	return spec->real;
 }
-int Convolver::Spectra::create(int abuffers_needed) {
-	buffers_needed = abuffers_needed;
-	const int real_size = 2 * buffer_size * buffers_needed;
+int Convolver::Spectra::create(int buffers_needed, int filter_blength = -1) {
+	this->filter_blength = filter_blength;
+	if (filter_blength == -1) {
+		this->filter_blength = buffers_needed;
+	}
+	this->buffers_needed = buffers_needed;
+	const int real_size = buffer_size * (this->buffers_needed + this->filter_blength);
 	const int complex_size = real_size / 2 + 1;
 	real.resize(real_size, 2);
 	complex1.resize(complex_size, 4);
@@ -57,15 +74,16 @@ int Convolver::Spectra::create(int abuffers_needed) {
 Convolver::Spectra::Spectra() {
 	count = -1;
 	buffers_needed = -1;
+	filter_blength = -1;
 }
-int Convolver::add_to_convolution_buffer(a2d::Array2D<pflt>& audio_in, long acount, long aoffset) {
+int Convolver::add_to_convolution_buffer(a2d::Array2D<pflt>& audio_in, long count, long offset) {
 	using namespace a2d;
-	long index1 = ((acount + aoffset) % convolution_buffer_blength) * buffer_size;
-	long index2 = index1 + audio_in.rows;
+	const long index1 = ((count + offset) % convolution_buffer_blength) * buffer_size;
+	const long index2 = index1 + audio_in.rows;
 	audio_in.vreset(); convolution_buffer.vreset();
 	if (index2 > convolution_buffer.rows) {
-		long delta1 = convolution_buffer.rows - index1;
-		long delta2 = audio_in.rows - delta1;
+		const long delta1 = convolution_buffer.rows - index1;
+		const long delta2 = audio_in.rows - delta1;
 		aadd(convolution_buffer.vpart(index1, index1 + delta1), audio_in.vpart(0, delta1));
 		aadd(convolution_buffer.vpart(0, delta2), audio_in.vpart(delta1, delta1 + delta2));
 	}
@@ -76,15 +94,15 @@ int Convolver::add_to_convolution_buffer(a2d::Array2D<pflt>& audio_in, long acou
 	kset(audio_in, 0);
 	return 0;
 } 
-a2d::Array2D<pflt>& Convolver::get_previous_buffers(a2d::Array2D<pflt>& real, int no_previous_buffers, long acount) {
+a2d::Array2D<pflt>& Convolver::get_previous_buffers(a2d::Array2D<pflt>& real, int no_previous_buffers, long count) {
 	using namespace a2d;
-	long count_pb = acount % longest_filter;
-	long index1 = (count_pb + 1 - no_previous_buffers) * buffer_size;
+	const long count_pb = count % longest_filter;
+	const long index1 = (count_pb + 1 - no_previous_buffers) * buffer_size;
 	real.vreset(); previous_buffers.vreset();
 	if (index1 < 0) {
-		index1 += previous_buffers.rows;
-		long delta1 = previous_buffers.rows - index1;
-		long delta2 = no_previous_buffers - delta1;
+		const long index = index1 + previous_buffers.rows;
+		const long delta1 = previous_buffers.rows - index1;
+		const long delta2 = no_previous_buffers - delta1;
 		real.vpart(0, delta1);
 		previous_buffers.vpart(index1, index1 + delta1);
 		aset(real, previous_buffers);
@@ -93,7 +111,7 @@ a2d::Array2D<pflt>& Convolver::get_previous_buffers(a2d::Array2D<pflt>& real, in
 		aset(real, previous_buffers);
 	}
 	else {
-		long index2 = (count_pb + 1) * buffer_size;
+		const long index2 = (count_pb + 1) * buffer_size;
 		aset(real.vpart(0, no_previous_buffers * buffer_size), previous_buffers.vpart(index1, index2));
 	}
 	real.vreset(); previous_buffers.vreset();
@@ -101,8 +119,8 @@ a2d::Array2D<pflt>& Convolver::get_previous_buffers(a2d::Array2D<pflt>& real, in
 }
 a2d::Array2D<pflt>& Convolver::get_from_convolution_buffer(a2d::Array2D<pflt>& getter) {
 	using namespace a2d;
-	long index1 = (count % convolution_buffer_blength) * buffer_size;
-	long index2 = index1 + buffer_size;
+	const long index1 = (count % convolution_buffer_blength) * buffer_size;
+	const long index2 = index1 + buffer_size;
 	convolution_buffer.vpart(index1, index2);
 	aset(getter, convolution_buffer);
 	kset(convolution_buffer, 0);
@@ -112,15 +130,25 @@ a2d::Array2D<pflt>& Convolver::get_from_convolution_buffer(a2d::Array2D<pflt>& g
 }
 int Convolver::partition_impulse(int ff_blength, int height, int n_cap, int n_step, int n_start) {
 	using namespace a2d;
+	Array2Dy<pflt> filter_partition;
 	AudioFile<pflt> infile;
 	infile.load("longverb.wav");
 	int num_samples = infile.getNumSamplesPerChannel();
 	int f_blength = num_samples / buffer_size;
 	Array2Dy<int> buffers_needed(f_blength);
 	Array2Dy<int> filter_indices(f_blength);
-	Array2Dy<int> unique_spectras(n_cap - n_start);
 	Array2Dy<int> offsets(f_blength);
 	kset(offsets, ff_blength);
+	filter_indices(0) = ff_blength * buffer_size;
+
+	// first filter init
+	filter_partition.resize(ff_blength * buffer_size, 2);
+	for (auto i = 0; i < ff_blength * buffer_size; i++) {
+		filter_partition(i, 0) = infile.samples[0][i];
+		filter_partition(i, 1) = infile.samples[1][i];
+	} 
+	first_spectra.create(1, ff_blength);
+	first_filter.create(filter_partition, first_spectra, 0, 1, ff_blength);
 
 	int n = n_start;
 	int num_filters = 0;
@@ -134,7 +162,7 @@ int Convolver::partition_impulse(int ff_blength, int height, int n_cap, int n_st
 		buffers_needed(num_filters) = pow(2, n);
 		space_left -= buffers_needed(num_filters);
 		sum_of_previous_filters += previous_buffers_needed;
-		filter_indices(num_filters + 1) = buffer_size*buffers_needed(num_filters) + filter_indices(num_filters);
+		filter_indices(num_filters + 1) = buffer_size * buffers_needed(num_filters) + filter_indices(num_filters);
 		if (buffers_needed(num_filters) != previous_buffers_needed) {
 			sum_of_previous_buffers += buffers_needed(num_filters) - previous_buffers_needed;
 			num_spectras++;
@@ -154,7 +182,6 @@ int Convolver::partition_impulse(int ff_blength, int height, int n_cap, int n_st
 
 	filters.resize(num_filters);
 	spectras.resize(num_spectras);
-	Array2Dy<pflt> filter_partition;
 	auto j = 0;
 	for (auto i = 0; i < num_filters; i++) {
 		filter_partition.resize(buffers_needed(i) * buffer_size, 2);
@@ -170,7 +197,7 @@ int Convolver::partition_impulse(int ff_blength, int height, int n_cap, int n_st
 			j++;
 			spectras(j).create(buffers_needed(i));
 		}
-		filters(i).create(buffers_needed(i), offsets(i), filter_partition, spectras(j));
+		filters(i).create(filter_partition, spectras(j), offsets(i), buffers_needed(i));
 	}
 	longest_filter = filters(-1).buffers_needed;
 	bool test = true;
@@ -184,24 +211,42 @@ int Convolver::partition_impulse(int ff_blength, int height, int n_cap, int n_st
 	}
 	return 0;
 }
+int Convolver::convolution_worker() {
+	FilterPartition* test;
+	while (true) {
+		test = dog.front();
+		if ((*test).spectra_needed((*test).count)) {
+			get_previous_buffers(*(*test).real, (*test).buffers_needed, count);
+			(*test).convolve_rfft();
+		}
+		else {
+			(*test).convolve_no_rfft();
+		}
+		add_to_convolution_buffer(*(*test).real, count, (*test).offset);
+		dog.pop();
+	}
+	return 0;
+}
 Convolver::Convolver() {
 	std::cout << "initializing convolver...\n";
-	partition_impulse(0, 4, 5, 2, 0);
+	partition_impulse(3, 4, 5, 2, 0);
 }
 a2d::Array2D<pflt>& Convolver::convolve(a2d::Array2D<pflt>& audio_in) {
-	int buffer_pos = buffer_size * (count % longest_filter);
+	const int buffer_pos = buffer_size * (count % longest_filter);
 	previous_buffers.vpart(buffer_pos, buffer_pos + buffer_size);
 	aset(previous_buffers, audio_in).vreset();
-	for (int i = 0; i < filters.length; i++) {
+	aset((*first_filter.real).vpart(0, audio_in.rows), audio_in).vreset();
+	add_to_convolution_buffer(first_filter.convolve_rfft(), count, first_filter.offset);
+	for (auto i = 0; i < filters.length; i++) {
 		if ((count + 1) % filters(i).buffers_needed != 0) break;
 		if (filters(i).spectra_needed(count)) {
-			get_previous_buffers(filters(i).spec->real, filters(i).buffers_needed, count);
+			get_previous_buffers(*filters(i).real, filters(i).buffers_needed, count);
 			filters(i).convolve_rfft();
 		}
 		else {
 			filters(i).convolve_no_rfft();
 		}
-		add_to_convolution_buffer(filters(i).spec->real, count, filters(i).offset);
+		add_to_convolution_buffer(*filters(i).real, count, filters(i).offset);
 	}
 	get_from_convolution_buffer(audio_in);
 	count++;

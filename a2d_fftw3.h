@@ -2,7 +2,7 @@
 #include <iostream>
 #include <fftw3.h>
 #include "a2d.h"
-#define SAFE
+#define SAFEa
 namespace a2d_fft_f {
 	// forward rfft will go into complex, inverse rfft will go into real
 	//

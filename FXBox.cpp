@@ -40,7 +40,7 @@ int main(){
 			adata(j, 1) = infile.samples[1][j + i * buffer_size];
 		}
 		//comp.compress(adata);
-		conv.convolve(adata); 
+		conv.convolve(adata);  
 		for (auto j = 0; j < buffer_size; j++) {
 			buffer[0][j + i * buffer_size] = adata(j, 0);
 			buffer[1][j + i * buffer_size] = adata(j, 1);
@@ -48,7 +48,7 @@ int main(){
 	}
 	auto stop = high_resolution_clock::now();
 	auto duration = duration_cast<milliseconds>(stop - start);
-	std::cout << "\nfxbox duation: " << duration.count() << "ms";
+	std::cout << "fxbox duation: " << duration.count() << "ms\n";
 	if (!outfile.setAudioBuffer(buffer)) { std::cout << "whoops"; }
 	outfile.setAudioBufferSize(numChannels, numBuffers * buffer_size);
 	outfile.setNumSamplesPerChannel(numBuffers * buffer_size);
@@ -56,6 +56,5 @@ int main(){
 	outfile.setBitDepth(16);
 	outfile.setSampleRate(44100);
 	outfile.save("guitar_sample16_cppout.wav");
-	adata(buffer_size - 1, -1);
 }
 
