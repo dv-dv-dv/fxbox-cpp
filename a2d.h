@@ -1,14 +1,14 @@
 #pragma once
 #include <iostream>
-#define SAFEa
-namespace a2d { 
+#define a2d_SAFE
+namespace a2d {
 	template <typename T>
 	class Array2D {
 	protected:
 		bool _dynamic = true;
-		int _length, _cols, _rows, _vrows, _vrows1, _vrows2, _vcols, _vcols1, _vcols2;
+		int _length, _cols, _rows, _vrows, _vrows1, _vrows2, _vcols, _vcols1, _vcols2, _lr, _lc;
 		T* _array_ptr = NULL;
-	public: 
+	public:
 		const int& length = _length;
 		const int& cols = _cols;
 		const int& rows = _rows;
@@ -18,6 +18,11 @@ namespace a2d {
 		const int& vcols = _vcols;
 		const int& vcols1 = _vcols1;
 		const int& vcols2 = _vcols2;
+		const int& lr = _lr;
+		const int& lc = _lc;
+		Array2D() {
+			_length = _cols = _rows = _vrows = _vrows1 = _vrows2 = _vcols = _vcols1 = _vcols2 = _lr = _lc = 0;
+		}
 		template<typename U>
 		Array2D<T>& copy(const Array2D<U>& test) {
 			if (&test == this) return *this;
@@ -35,6 +40,8 @@ namespace a2d {
 			_vcols2 = test.vcols2;
 			_vrows = test.vrows;
 			_vcols = test.vcols;
+			_lr = rows - 1;
+			_lc = cols - 1;
 			acopy(*this, test);
 			return *this;
 		}
@@ -68,7 +75,7 @@ namespace a2d {
 			if (vrows2 == -1) vrows2 = _rows;
 			if (vcols2 == -1) vcols2 = _cols;
 
-#if defined(SAFE)
+#if defined(a2d_SAFE)
 			if (!a2d_check_vpart(*this, vrows1, vrows2, vcols1, vcols2)) { throw std::runtime_error(""); }
 #endif
 			_vrows1 = vrows1;
@@ -87,21 +94,17 @@ namespace a2d {
 			return *this;
 		}
 		T& operator()(int index1 = 0, int index2 = 0) {
-			if (index1 == -1) { index1 = rows - 1; }
-			if (index2 == -1) { index2 = cols - 1; }
-#if defined(SAFE)
+#if defined(a2d_SAFE)
 			if (!a2d_check_index(*this, index1, index2)) { throw std::runtime_error(""); }
 #endif
 			return _array_ptr[index1 * cols + index2];
-		} 
-		const T& operator()(int index1 = 0, int index2 = 0) const { 
-			if (index1 == -1) { index1 = rows - 1; }
-			if (index2 == -1) { index2 = cols - 1; }
-#if defined(SAFE)
+		}
+		const T& operator()(int index1 = 0, int index2 = 0) const {
+#if defined(a2d_SAFE)
 			if (!a2d_check_index(*this, index1, index2)) { throw std::runtime_error(""); }
 #endif
-			return _array_ptr[index1 * cols + index2]; 
-		} 
+			return _array_ptr[index1 * cols + index2];
+		}
 	};
 	// Static array
 	template<typename T, int R, int C = 1>
@@ -149,6 +152,33 @@ namespace a2d {
 			delete[] this->_array_ptr;
 		}
 	};
+	template <typename T>
+	class Array2Dp : public Array2D<T> {
+	public:
+		Array2Dp() {
+			this->_cols = 0;
+			this->_rows = 0;
+			this->_array_ptr = NULL;
+			this->vreset();
+		}
+		Array2Dp(int R, int C, T* ptr) {
+			this->update_ptr(R, C, ptr);
+		}
+		void update_ptr(T* ptr) {
+			this->_array_ptr = ptr;
+		}
+		void update_ptr(int R, int C, T* ptr) {
+			this->_cols = C;
+			this->_rows = R;
+			this->_array_ptr = ptr;
+			this->vreset();
+		}
+		void update_size(int R, int C) {
+			this->_cols = C;
+			this->_rows = R;
+			this->vreset();
+		}
+	};
 	// misc utilities
 	template <typename T>
 	int aprint(const Array2D<T>& test) {
@@ -187,7 +217,7 @@ namespace a2d {
 	}
 	template <typename T, typename U>
 	Array2D<T>& acopy(Array2D<T>& test1, const Array2D<U>& test2) {
-#if defined(SAFE)
+#if defined(a2d_SAFE)
 		if (!a2d_check_dims(test1, test2, false)) { throw std::runtime_error(""); }
 #endif
 		for (auto i = 0; i < test1.rows; i++) {
@@ -237,37 +267,37 @@ namespace a2d {
 	}
 	// array array operations
 	template <typename T, typename U, typename V = T>
-	Array2D<T>& aset(Array2D<T>& test1, const Array2D<U>& test2, V k=1) {
-#if defined(SAFE)
+	Array2D<T>& aset(Array2D<T>& test1, const Array2D<U>& test2, V k = 1) {
+#if defined(a2d_SAFE)
 		if (!a2d_check_dims(test1, test2, true)) { throw std::runtime_error(""); }
 #endif
 		for (auto i = 0; i < test1.vrows; i++) {
 			for (auto j = 0; j < test1.vcols; j++) {
-				test1(i + test1.vrows1, j + test1.vcols1) = k*test2(i + test2.vrows1, j + test2.vcols1);
+				test1(i + test1.vrows1, j + test1.vcols1) = k * test2(i + test2.vrows1, j + test2.vcols1);
 			}
 		}
 		return test1;
 	}
 	template <typename T, typename U, typename V = T>
-	Array2D<T>& amult(Array2D<T>& test1, const Array2D<U>& test2, V k=1) {
-#if defined(SAFE)
+	Array2D<T>& amult(Array2D<T>& test1, const Array2D<U>& test2, V k = 1) {
+#if defined(a2d_SAFE)
 		if (!a2d_check_dims(test1, test2, true)) { throw std::runtime_error(""); }
 #endif
 		for (auto i = 0; i < test1.vrows; i++) {
 			for (auto j = 0; j < test1.vcols; j++) {
-				test1(i + test1.vrows1, j + test1.vcols1) *= k*test2(i + test2.vrows1, j + test2.vcols1);
+				test1(i + test1.vrows1, j + test1.vcols1) *= k * test2(i + test2.vrows1, j + test2.vcols1);
 			}
 		}
 		return test1;
 	}
 	template <typename T, typename U, typename V = T>
-	Array2D<T>& aadd(Array2D<T>& test1, const Array2D<U>& test2, V k=1) {
-#if defined(SAFE)
+	Array2D<T>& aadd(Array2D<T>& test1, const Array2D<U>& test2, V k = 1) {
+#if defined(a2d_SAFE)
 		if (!a2d_check_dims(test1, test2, true)) { throw std::runtime_error(""); }
 #endif
 		for (auto i = 0; i < test1.vrows; i++) {
 			for (auto j = 0; j < test1.vcols; j++) {
-				test1(i + test1.vrows1, j + test1.vcols1) += k*test2(i + test2.vrows1, j + test2.vcols1);
+				test1(i + test1.vrows1, j + test1.vcols1) += k * test2(i + test2.vrows1, j + test2.vcols1);
 			}
 		}
 		return test1;
