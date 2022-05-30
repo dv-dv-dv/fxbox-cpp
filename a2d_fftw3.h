@@ -2,7 +2,7 @@
 #include <iostream>
 #include <fftw3.h>
 #include "a2d.h"
-#define SAFEa
+#define a2d_fftw3_SAFE
 namespace a2d_fft_f {
 	// forward rfft will go into complex, inverse rfft will go into real
 	//
@@ -176,7 +176,7 @@ namespace a2d_fft_f {
 	// transforms
 	template<typename T = float>
 	a2d::Array2D<T>& rfft(a2d_rfft<float>& test) {
-#if defined(SAFE)
+#if defined(a2d_fftw3_SAFE)
 		if (!test.verify_arrays()) { throw std::runtime_error(""); }
 #endif
 		fftwf_execute(test.fwd);
@@ -184,7 +184,7 @@ namespace a2d_fft_f {
 	}
 	template<typename T = float>
 	a2d::Array2D<T>& irfft(a2d_irfft<float>& test) {
-#if defined(SAFE)
+#if defined(a2d_fftw3_SAFE)
 		if (!test.verify_arrays()) { throw std::runtime_error(""); }
 #endif
 		fftwf_execute(test.bck);
@@ -193,7 +193,7 @@ namespace a2d_fft_f {
 	template<typename T = float>
 	a2d::Array2D<T>& c_amult(a2d::Array2D<float>& test1, const a2d::Array2D<float>& test2) {
 		float a = 0, b = 0, cols = 0, d = 0;
-#if defined(SAFE)
+#if defined(a2d_fftw3_SAFE)
 		if (!a2d_check_dims_complex(test1, test2)) { throw std::runtime_error(""); }
 #endif
 		for (auto i = 0; i < test1.vrows; i++) {
@@ -211,7 +211,7 @@ namespace a2d_fft_f {
 	template<typename T = float>
 	a2d::Array2D<T>& c_amult(a2d::Array2D<float>& test1, const a2d::Array2D<float>& test2, const a2d::Array2D<float>& test3) {
 		float a = 0, b = 0, c = 0, d = 0;
-#if defined(SAFE)
+#if defined(a2d_fftw3_SAFE)
 		if (!a2d_check_dims_complex(test1, test2)) { throw std::runtime_error(""); }
 #endif
 		for (auto i = 0; i < test1.vrows; i++) {
@@ -229,7 +229,7 @@ namespace a2d_fft_f {
 	template<typename T = float>
 	a2d::Array2D<T>& c_kmult(a2d::Array2D<float>& test1, float real, float imag) {
 		float a = 0, b = 0;
-#if defined(SAFE)
+#if defined(a2d_fftw3_SAFE)
 		if (test1.vcols % 2 != 0) { std::cout << "\na2d c_kmult error: cols must be a multiple of 2, cols: " << test1.cols << "\n"; throw std::runtime_error(""); }
 #endif
 		for (auto i = 0; i < test1.vrows; i++) {

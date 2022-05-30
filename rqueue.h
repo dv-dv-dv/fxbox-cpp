@@ -6,10 +6,10 @@ namespace q {
 	template<typename T>
 	class ring_queue {
 	protected:
-		std::atomic<T*> _test; 
-		std::atomic<int> _max_size;
-		std::atomic<int> _push_pos = 0;
-		std::atomic<int> _pop_pos = 0;
+		std::atomic<short> _max_size = 0; // only allow one writer
+		std::atomic<short> _push_pos = 0; // only allow one writer
+		std::atomic<short> _pop_pos = 0; // only allow one writer
+		std::atomic<T*> _test = NULL;  // only allow one writer
 		bool safe(int push_pos, int pop_pos) {
 			bool safe = true;
 			if (pop_pos > push_pos) {
@@ -92,7 +92,7 @@ namespace q {
 	template <typename T>
 	class d_rqueue : public ring_queue<T> {
 	private:
-		T* _dynamic_array_queue;
+		T* _dynamic_array_queue = NULL;
 	public:
 		d_rqueue() {
 			this->_test = NULL;
@@ -103,10 +103,10 @@ namespace q {
 			this->_test = _dynamic_array_queue;
 			this->_max_size = max_size;
 		}
-		int resize(int max_size) {
+		int resize(short max_size) {
 			delete[] _dynamic_array_queue;
-			_dynamic_array_queue = new T[max_size]();
-			this->_test = _dynamic_array_queue;
+			this->_dynamic_array_queue = new T[max_size]();
+			this->_test = this->_dynamic_array_queue;
 			this->_max_size = max_size;
 			return 0;
 		}
