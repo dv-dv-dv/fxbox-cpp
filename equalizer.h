@@ -21,8 +21,8 @@ private:
 		void set(short type, pflt wo, pflt bfac, pflt gdb);
 		void add_prevx(a2d::Array2D<pflt>& x, int index);
 		void add_prevy(a2d::Array2D<pflt>& y, int index);
-		pflt get_prevx(int index, int channel);
-		pflt get_prevy(int index, int channel);
+		pflt* get_prevx(int index, int channel);
+		pflt* get_prevy(int index, int channel);
 	};
 	Filter lp, hp, bp;
 	a2d::Array2Dy<pflt> temp;
