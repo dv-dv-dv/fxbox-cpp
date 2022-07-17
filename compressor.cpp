@@ -5,8 +5,8 @@ void Compressor::compute_params() {
 	gcp2 = -thresh + knee / 2;
 	gcp3 = (1 - 1 / (ratio + very_small)) * thresh;
 	gcp4 = 1 / (ratio + very_small);
-	atk = exp(-1 / (attack * fs + very_small));
-	rel = exp(-1 / (release * fs + very_small));
+	atk = exp(-1 / (attack * sampfreq + very_small));
+	rel = exp(-1 / (release * sampfreq + very_small));
 	atk1 = 1 - atk;
 	rel1 = 1 - rel;
 }

@@ -244,7 +244,7 @@ Convolver::Convolver(std::string filename, bool realtime) {
 	const int n_start = ff_power - 1;
 	this->realtime = realtime;
 	partition_impulse(filename, ff_blength, height, n_cap, n_step, n_start);
-	count = 0;
+	count = 0; 
 	allow_convolution_worker_thread = true;
 	convolution_buffer_lock = false;
 	convolution_worker_thread = std::thread(&Convolver::convolution_worker, this, &convolution_buffer, &convolution_queue);

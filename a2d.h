@@ -181,6 +181,17 @@ namespace a2d {
 	};
 	// misc utilities
 	template <typename T>
+	int pprint(const Array2D<T>& test) {
+		for (auto i = 0; i < test.vrows; i++) {
+			for (auto j = 0; j < test.vcols; j++) {
+				std::cout << test(i, j) << " ";
+			}
+			std::cout << "\n";
+		}
+		std::cout << "\n";
+		return 0;
+	}
+	template <typename T>
 	int aprint(const Array2D<T>& test) {
 		for (auto i = 0; i < test.rows; i++) {
 			for (auto j = 0; j < test.cols; j++) {
