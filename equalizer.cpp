@@ -23,34 +23,42 @@ void Equalizer::Filter::set(short type, pflt wo, pflt bfac, pflt gdb) {
 		this->N = 4;
 		break;
 	}
-	prevx.resize(N, 2);
-	prevy.resize(N, 2);
+	prevx.resize(N + 1, 2);
+	prevy.resize(N + 1, 2);
 	fb.bilin(analog, digital, sampfreq);
 	analog.print();
 	digital.print();
 }
+
+void Equalizer::Filter::add_prevx(a2d::Array2D<pflt>& x, int index) {
+	indx = (indx + 1) % prevx.rows;
+	prevx(indx, 0) = x(index, 0);
+	prevx(indx, 1) = x(index, 1);
+}
+void Equalizer::Filter::add_prevy(a2d::Array2D<pflt>& y, int index) {
+	prevy(indy, 0) = y(index, 0);
+	prevy(indy, 1) = y(index, 1);
+	indy = (indy + 1) % prevy.rows;
+}
+pflt Equalizer::Filter::get_prevx(int index, int channel) {
+	return prevx((indx - index + prevx.rows) % prevx.rows, channel);
+}
+pflt Equalizer::Filter::get_prevy(int index, int channel) {
+	return prevy((indy - index + prevy.rows) % prevy.rows, channel);
+}
 void Equalizer::filter(a2d::Array2D<pflt>& x, Filter& f) {
 	using namespace a2d;
 	auto asdf = f.digital.getN() + 1;
-	aset(temp, x.vreset());
-	kset(x, 0);
 	for (auto n = 0; n < x.rows; n++) {
-		x(n, 0) = f.digital.b[0] * temp(n, 0);
-		x(n, 1) = f.digital.b[0] * temp(n, 1);
-		for (auto j = 1; j < asdf; j++) {
-			if (n - j < 0) {
-				x(n, 0) += f.digital.b[j] * f.prevx(f.N - j + n, 0) - f.digital.a[j] * f.prevy(f.N - j + n, 0);
-				x(n, 1) += f.digital.b[j] * f.prevx(f.N - j + n, 1) - f.digital.a[j] * f.prevy(f.N - j + n, 1);
-			}
-			else {
-				x(n, 0) += f.digital.b[j] * temp(n - j, 0) - f.digital.a[j] * x(n - j, 0);
-				x(n, 1) += f.digital.b[j] * temp(n - j, 1) - f.digital.a[j] * x(n - j, 1);
-			}
+		f.add_prevx(x, n);
+		x(n, 0) *= f.digital.b[0];
+		x(n, 1) *= f.digital.b[0];
+		for (auto j = 1; j <= f.N; j++) {
+			x(n, 0) += f.digital.b[j] * f.get_prevx(j, 0) - f.digital.a[j] * f.get_prevy(j, 0);
+			x(n, 1) += f.digital.b[j] * f.get_prevx(j, 1) - f.digital.a[j] * f.get_prevy(j, 1);
 		}
+		f.add_prevy(x, n);
 	}
-	aset(f.prevx, temp.vpart(x.rows - f.N));
-	aset(f.prevy, x.vpart(x.rows - f.N));
-	x.vreset(); temp.vreset();
 }
 Equalizer::Equalizer() {
 	temp.resize(buffer_size, 2);
